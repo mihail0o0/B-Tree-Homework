@@ -1,6 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+using System.Data;
+using System.Globalization;
+
 namespace B__Stablo;
 
 class BPlusNode {
+    /// <summary>
+    /// Odgovara broju ubacenih kljuceva i podataka.
+    /// Broj dece je za 1 veci od ovog broja (ukoliko nod ima dece).
+    /// </summary>
     public int Length { get; set; }
     public int[] Keys { get; set; }
     public BPlusNode[]? Children { get; set; }
@@ -11,39 +19,79 @@ class BPlusNode {
 
     public BPlusNode(int degree, bool isLeaf) {
         Length = 0;
-        Keys = new int[degree];
+        Keys = new int[degree - 1];
         NextLeaf = null;
         Parent = null;
         IsLeaf = isLeaf;
 
         if (isLeaf) {
             Children = null;
-            DataPointers = new object[degree];
+            DataPointers = new object[degree - 1];
         }
         else {
-            Children = new BPlusNode[degree + 1];
+            Children = new BPlusNode[degree];
             DataPointers = null;
         }
     }
 
-    public IEnumerable<(int index, int key)> IterateKeys(){
-        for(int i = 0; i < Keys.Length; i++){
+    public void InsertLeaf(int[] keysToIns, object[] dataPointersToIns) {
+        if (IsLeaf == false) throw new Exception("Nije leaf, ne moze da se ubace podaci");
+        if (DataPointers == null) throw new Exception("Jeste leaf ali nema data pointers, ne mogu da se ubace podaci");
+
+        int size = 0;
+        for (int i = 0; i < keysToIns.Length; i++) {
+            int j;
+            for(j = size; j > 0 && this.Keys[j - 1] > keysToIns[i]; j--){
+                Keys[j] = Keys[j - 1];
+                DataPointers[j] = DataPointers[j - 1]; 
+            }
+            
+            Keys[j] = keysToIns[i];
+            DataPointers[j] = dataPointersToIns[i];
+            size++;
+        }
+        Length = size;
+
+        // this.Print();
+    }
+
+    public void Print() {
+        if (IsLeaf == true) {
+            foreach ((int index, object obj) in this.IterateData()) {
+                System.Console.Write($"K: {Keys[index]} ");
+                System.Console.WriteLine($"O: {obj} ");
+            }
+            System.Console.WriteLine();
+
+            return;
+        }
+
+        foreach ((int index, int key) in this.IterateKeys()) {
+            System.Console.Write($"K: {key} ");
+        }
+        System.Console.WriteLine();
+
+        return;
+    }
+
+    public IEnumerable<(int index, int key)> IterateKeys() {
+        for (int i = 0; i < Length; i++) {
             yield return (i, Keys[i]);
         }
     }
 
     public IEnumerable<(int index, BPlusNode node)> IterateChildren() {
-        if(Children == null) yield break;
+        if (Children == null) yield break;
 
-        for(int i = 0; i < Children.Length; i++){
+        for (int i = 0; i <= Length; i++) {
             yield return (i, Children[i]);
         }
     }
 
-    public IEnumerable<(int index, object data)> IterateData(){
-        if(DataPointers == null) yield break;
+    public IEnumerable<(int index, object data)> IterateData() {
+        if (DataPointers == null) yield break;
 
-        for(int i = 0; i < DataPointers.Length; i++){
+        for (int i = 0; i < Length; i++) {
             yield return (i, DataPointers[i]);
         }
     }

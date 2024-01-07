@@ -19,20 +19,7 @@ class BPlusTree {
     }
 
     public BPlusNode Insert(int newKey, object newData) {
-        BPlusNode curr = Root;
-
-        // nadjem ga
-        while (curr.IsLeaf == false) {
-            foreach ((int index, int nodeKey) in curr.IterateKeys()) {
-                if (newKey < nodeKey) {
-                    System.Console.WriteLine(index + " " + nodeKey);
-                    curr = curr.Children![index];
-                    break;
-                }
-                curr = curr.Children![curr.Length];
-            }
-        }
-
+        BPlusNode curr = FindNode(newKey);
         // ako mogu dodam
         if (curr.Length < Degree - 1) {
             int j;
@@ -52,17 +39,16 @@ class BPlusTree {
             return curr;
         }
 
-        // ako nema mesta preselim
+        // ako nema mesta, preselim
         curr.Length = Degree / 2;
-        int[] rightKeys = new int[curr.Length + 1];
-        object[] rightData = new object[curr.Length + 1];
+        BPlusNode splitedRight = new(Degree, true);
 
-        Array.ConstrainedCopy(curr.Keys, curr.Length, rightKeys, 0, curr.Length);
-        rightKeys[curr.Length] = newKey;
+        Array.ConstrainedCopy(curr.Keys, curr.Length, splitedRight.Keys, 0, curr.Length);
+        // ovde si stao mora ovaj kjuc ubacis lepo
+        splitedRight.Keys[curr.Length] = newKey;
 
         Array.ConstrainedCopy(curr.DataPointers!, curr.Length, rightData, 0, curr.Length);
         rightData[curr.Length] = newData;
-        BPlusNode splitedRight = new(Degree, true);
         splitedRight.InsertLeaf(rightKeys, rightData);
 
         splitedRight.NextLeaf = curr.NextLeaf;
@@ -73,10 +59,29 @@ class BPlusTree {
         return curr;
     }
 
+    public BPlusNode FindNode(int keyToFind) {
+        BPlusNode curr = Root;
+
+        // nadjem ga
+        while (curr.IsLeaf == false) {
+            foreach ((int index, int nodeKey) in curr.IterateKeys()) {
+                if (keyToFind < nodeKey) {
+                    System.Console.WriteLine(index + " " + nodeKey);
+                    curr = curr.Children![index];
+                    break;
+                }
+                curr = curr.Children![curr.Length];
+            }
+        }
+
+        return curr;
+    }
+
     // 3 slucaja, parrent ne postoji, parrent postoji ali je nepun
     // ili parrent je pun
     public void UpTree(BPlusNode left, BPlusNode right) {
-        if (left.Parent == null) {
+        BPlusNode? leftParrent = left.Parent;
+        if (leftParrent == null) {
             BPlusNode noviRoot = new(Degree, false);
             noviRoot.Keys[0] = right.Keys[0];
             left.Parent = noviRoot;
@@ -89,10 +94,36 @@ class BPlusTree {
             return;
         }
 
-        if (left.Parent.Length < Degree - 1) {
+        // ako niz nije prepucan
+        if (leftParrent.Length < Degree - 1) {
+            int j;
+            for (j = leftParrent.Length; j > 0 && leftParrent.Keys[j - 1] > right.Keys[0]; j--) {
+                leftParrent.Keys[j] = leftParrent.Keys[j - 1];
+                if (leftParrent.Children == null) throw new Exception("Nema dijece");
+                leftParrent.Children[j + 1] = leftParrent.Children[j];
+            }
 
+            if (leftParrent.Children == null) throw new Exception("Nema dijece");
+            leftParrent.Children[j + 1] = right;
+
+            return;
         }
 
+        // ako jeste
+        leftParrent.Length = Degree / 2;
+
+        int[] rightKeys = new int[leftParrent.Length + 1];
+        BPlusNode[] rightChildren = new BPlusNode[leftParrent.Length];
+
+        Array.ConstrainedCopy(leftParrent.Keys, leftParrent.Length, rightKeys, 0, leftParrent.Length);
+        //rightKeys[curr.Length] = newKey;
+
+        Array.ConstrainedCopy(leftParrent.Children!, leftParrent.Length, rightChildren, 0, rightChildren.Length);
+        rightChildren[leftParrent.Length + 1] = right;
+        BPlusNode splitedRight = new(Degree, false);
+        splitedRight.InsertLeaf(rightKeys, rightChildren);
+
+        UpTree(leftParrent, splitedRight);
     }
 
     public void Print() {

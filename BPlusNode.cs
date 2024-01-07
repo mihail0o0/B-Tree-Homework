@@ -34,26 +34,26 @@ class BPlusNode {
         }
     }
 
-    public void InsertLeaf(int[] keysToIns, object[] dataPointersToIns) {
-        if (IsLeaf == false) throw new Exception("Nije leaf, ne moze da se ubace podaci");
-        if (DataPointers == null) throw new Exception("Jeste leaf ali nema data pointers, ne mogu da se ubace podaci");
-
+    public void InsertLeaf(int[] keysToIns, object[]? dataPointersToIns = null, BPlusNode[]? childrenToIns = null) {
         int size = 0;
-        for (int i = 0; i < keysToIns.Length; i++) {
-            int j;
-            for(j = size; j > 0 && this.Keys[j - 1] > keysToIns[i]; j--){
-                Keys[j] = Keys[j - 1];
-                DataPointers[j] = DataPointers[j - 1]; 
+        int j;
+        for (j = size; j > 0 && this.Keys[j - 1] > keysToIns[i]; j--) {
+            Keys[j] = Keys[j - 1];
+            if (dataPointersToIns != null) {
+                DataPointers![j] = DataPointers[j - 1];
             }
-            
-            Keys[j] = keysToIns[i];
-            DataPointers[j] = dataPointersToIns[i];
-            size++;
         }
+
+        Keys[j] = keysToIns[i];
+        if (dataPointersToIns != null) {
+            DataPointers![j] = dataPointersToIns[i];
+        }
+        size++;
         Length = size;
 
         // this.Print();
     }
+
 
     public void Print() {
         if (IsLeaf == true) {

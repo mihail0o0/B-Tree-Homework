@@ -35,21 +35,21 @@ class BPlusNode {
     }
 
     public void InsertLeaf(int[] keysToIns, object[]? dataPointersToIns = null, BPlusNode[]? childrenToIns = null) {
-        int size = 0;
-        int j;
-        for (j = size; j > 0 && this.Keys[j - 1] > keysToIns[i]; j--) {
-            Keys[j] = Keys[j - 1];
-            if (dataPointersToIns != null) {
-                DataPointers![j] = DataPointers[j - 1];
-            }
-        }
+        // int size = 0;
+        // int j;
+        // for (j = size; j > 0 && this.Keys[j - 1] > keysToIns[i]; j--) {
+            // Keys[j] = Keys[j - 1];
+            // if (dataPointersToIns != null) {
+                // DataPointers![j] = DataPointers[j - 1];
+            // }
+        // }
 
-        Keys[j] = keysToIns[i];
-        if (dataPointersToIns != null) {
-            DataPointers![j] = dataPointersToIns[i];
-        }
-        size++;
-        Length = size;
+        // Keys[j] = keysToIns[i];
+        // if (dataPointersToIns != null) {
+            // DataPointers![j] = dataPointersToIns[i];
+        // }
+        // size++;
+        // Length = size;
 
         // this.Print();
     }

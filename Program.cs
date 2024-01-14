@@ -5,9 +5,13 @@ class Program
     {
         BPlusTree drvce = new(3);
 
-        drvce.Insert(10, 10);
-        drvce.Insert(20, 20);
-        drvce.Insert(30, 30);
+        drvce.Insert(3, 3);
+        drvce.Insert(5, 5);
+        drvce.Insert(7, 7);
+        drvce.Insert(2, 2);
+        drvce.Insert(1, 1);
+        // drvce.Insert(12, 12);
+        // drvce.Insert(13, 13);
         drvce.Print();
         drvce.PrintLeaves();
     }

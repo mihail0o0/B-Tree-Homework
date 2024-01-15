@@ -93,7 +93,7 @@ class BPlusTree {
         while (curr.IsLeaf == false) {
             bool found = false;
             foreach ((int index, int nodeKey) in curr.IterateKeys()) {
-                if (keyToFind < nodeKey) {
+                if (keyToFind <= nodeKey) {
                     found = true;
                     curr = curr.Children![index];
                     break;
@@ -260,7 +260,7 @@ class BPlusTree {
             if (curr.IsLeaf == false && qu.Peek() == null) {
                 qu.Enqueue(null);
             }
-            
+
             System.Console.Write("-> ");
         }
         System.Console.WriteLine();

@@ -17,7 +17,7 @@ class Program
         drvce.Insert(4, 4);
         drvce.Insert(5, 5);
         drvce.Print();
-        drvce.BTreePrint();
+        //drvce.BTreePrint();
         drvce.PrintLeaves();
     }
 }

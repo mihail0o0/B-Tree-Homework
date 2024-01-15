@@ -41,28 +41,47 @@ class BPlusTree {
         }
 
         // ako nema mesta, preselim
+        // sortiram, pa podelim 
+        int mostRightKey = newKey;
+        object mostRightData = newData;
+
+        if (curr.DataPointers == null) throw new Exception("Nema data pointers");
+
+        int k;
+        for (k = curr.Length - 1; k > 0 && curr.Keys[k] > newKey; k--) {
+            if (k == curr.Length - 1) {
+                mostRightKey = curr.Keys[k];
+                mostRightData = curr.DataPointers[k];
+            }
+
+            curr.Keys[k] = curr.Keys[k - 1];
+            curr.DataPointers[k] = curr.DataPointers[k - 1];
+        }
+
+        if (k != curr.Length - 1) {
+            curr.Keys[k] = newKey;
+            curr.DataPointers[k] = newData;
+        }
+
         curr.Length = Degree / 2;
         BPlusNode splitedRight = new(Degree, true);
+        if (splitedRight.DataPointers == null) throw new Exception("Nema data pointers be");
+
 
         Array.ConstrainedCopy(curr.Keys, curr.Length, splitedRight.Keys, 0, curr.Length);
-        if (splitedRight.DataPointers == null) throw new Exception("Nema data pointers be");
         Array.ConstrainedCopy(curr.DataPointers!, curr.Length, splitedRight.DataPointers, 0, curr.Length);
         splitedRight.Length = curr.Length;
 
-        int k;
-        for (k = splitedRight.Length; k > 0 && splitedRight.Keys[k - 1] > newKey; k--) {
-            splitedRight.Keys[k] = splitedRight.Keys[k - 1];
-            splitedRight.DataPointers[k] = splitedRight.DataPointers[k - 1];
-        }
-        splitedRight.Keys[k] = newKey;
-        splitedRight.DataPointers[k] = newData;
+
+        splitedRight.Keys[splitedRight.Length] = mostRightKey;
+        splitedRight.DataPointers[splitedRight.Length] = mostRightData;
 
         splitedRight.Length++;
 
         splitedRight.NextLeaf = curr.NextLeaf;
         curr.NextLeaf = splitedRight;
 
-        UpTree(curr, splitedRight);
+        UpTree(curr, splitedRight, splitedRight.Keys[0]);
 
         return curr;
     }
@@ -72,12 +91,15 @@ class BPlusTree {
 
         // nadjem ga
         while (curr.IsLeaf == false) {
+            bool found = false;
             foreach ((int index, int nodeKey) in curr.IterateKeys()) {
                 if (keyToFind < nodeKey) {
-                    System.Console.WriteLine(index + " " + nodeKey);
+                    found = true;
                     curr = curr.Children![index];
                     break;
                 }
+            }
+            if (found == false) {
                 curr = curr.Children![curr.Length];
             }
         }
@@ -89,11 +111,11 @@ class BPlusTree {
     // 3 slucaja: parrent ne postoji, 
     // parrent postoji ali je nepun,
     // ili parrent je pun (rekurzivno zovem)
-    public void UpTree(BPlusNode left, BPlusNode right) {
+    public void UpTree(BPlusNode left, BPlusNode right, int newKey) {
         BPlusNode? leftParrent = left.Parent;
         if (leftParrent == null) {
             BPlusNode noviRoot = new(Degree, false);
-            noviRoot.Keys[0] = right.Keys[0];
+            noviRoot.Keys[0] = newKey;
             left.Parent = noviRoot;
             right.Parent = noviRoot;
             if (noviRoot.Children == null) throw new Exception("Kako?");
@@ -107,41 +129,112 @@ class BPlusTree {
         // ako niz nije prepucan
         if (leftParrent.Length < Degree - 1) {
             int j;
-            for (j = leftParrent.Length; j > 0 && leftParrent.Keys[j - 1] > right.Keys[0]; j--) {
+            if (leftParrent.Children == null) throw new Exception("Nema dijece");
+
+            for (j = leftParrent.Length; j > 0 && leftParrent.Keys[j - 1] > newKey; j--) {
                 leftParrent.Keys[j] = leftParrent.Keys[j - 1];
-                if (leftParrent.Children == null) throw new Exception("Nema dijece");
                 leftParrent.Children[j + 1] = leftParrent.Children[j];
             }
 
-            if (leftParrent.Children == null) throw new Exception("Nema dijece");
+            leftParrent.Keys[j] = newKey;
             leftParrent.Children[j + 1] = right;
 
+            // za levog je vec postavljen parrent
+            right.Parent = leftParrent;
+
+            leftParrent.Length++;
             return;
         }
 
-        // ako jeste
-        leftParrent.Length = Degree / 2;
+        // ako je prepucalo
+        if (leftParrent.Children == null) throw new Exception("Nema children be");
+
+        int[] keyDup = new int[leftParrent.Length + 1];
+        BPlusNode[] childDup = new BPlusNode[leftParrent.Length + 2];
+
+        Array.Copy(leftParrent.Keys, keyDup, leftParrent.Length);
+        Array.Copy(leftParrent.Children, childDup, leftParrent.Length + 1);
+
+        int k;
+        for (k = leftParrent.Length; k > 0 && keyDup[k - 1] > newKey; k--) {
+            keyDup[k] = keyDup[k - 1];
+            childDup[k + 1] = childDup[k];
+        }
+
+        keyDup[k] = newKey;
+        childDup[k + 1] = right;
+
+        int midKey;
+        int midIndex;
+        if (keyDup.Length % 2 == 0) {
+            midIndex = (keyDup.Length / 2) + 1;
+        }
+        else {
+            midIndex = (keyDup.Length / 2);
+        }
+
+        midKey = keyDup[midIndex];
+
+        leftParrent.Length = midIndex;
         BPlusNode splitedRight = new(Degree, false);
 
-        Array.ConstrainedCopy(leftParrent.Keys, leftParrent.Length, splitedRight.Keys, 0, leftParrent.Length);
         if (splitedRight.Children == null) throw new Exception("Nema children be");
-        if (leftParrent.Children == null) throw new Exception("Nema children be");
-        Array.ConstrainedCopy(leftParrent.Children, leftParrent.Length, splitedRight.Children, 0, leftParrent.Length);
-        splitedRight.Length = leftParrent.Length;
 
+        Array.ConstrainedCopy(keyDup, 0, leftParrent.Keys, 0, midIndex);
+        Array.ConstrainedCopy(keyDup, midIndex + 1, splitedRight.Keys, 0, keyDup.Length - 1 - midIndex);
 
-        //rightKeys[curr.Length] = newKey;
-        int k;
-        for (k = splitedRight.Length; k > 0 && splitedRight.Keys[k - 1] > right.Keys[0]; k--) {
-            splitedRight.Keys[k] = splitedRight.Keys[k - 1];
-            splitedRight.Children[k] = splitedRight.Children[k - 1];
-        }
-        splitedRight.Keys[k] = right.Keys[0];
-        splitedRight.Children[k + 1] = right;
+        Array.ConstrainedCopy(childDup, 0, splitedRight.Children, 0, midIndex + 1);
+        Array.ConstrainedCopy(childDup, midIndex + 1, splitedRight.Children, 0, childDup.Length - 1 - midIndex);
+        splitedRight.Length = keyDup.Length - 1 - midIndex;
 
-        UpTree(leftParrent, splitedRight);
+        right.Parent = splitedRight;
+
+        UpTree(leftParrent, splitedRight, midKey);
     }
 
+    public void BTreePrint() {
+        TestPrint(Root, 0);
+    }
+    public void TestPrint(BPlusNode node, int level) {
+
+        Console.Write($"Level {level}, Leaf: {node.IsLeaf}, Keys: ");
+
+        for (int i = 0; i < node.Length; i++) {
+            Console.Write($"{node.Keys[i]} ");
+        }
+
+        Console.WriteLine();
+
+        if (node.IsLeaf != true) {
+            level++;
+
+            for (int i = 0; i < node.Length + 1; i++) {
+                TestPrint(node.Children![i], level);
+            }
+        }
+    }
+
+    // public void PrintTree(BPlusNode? root = null, string indent = "", bool last = true) {
+    // if (Root == null) return;
+    // root ??= Root;
+
+    // Console.Write(indent);
+    // if (last) {
+    // Console.Write("\\-");
+    // indent += "  ";
+    // }
+    // else {
+    // Console.Write("|-");
+    // indent += "| ";
+    // }
+
+    // Console.WriteLine($"{root.key} {root.value!.Value}");
+
+    // for (int i = 0; i < root.children.Count; i++) {
+    // PrintTree(root.children[i], indent, i == root.children.Count - 1);
+    // }
+
+    // }
     public void Print() {
         Queue<BPlusNode?> qu = new();
         qu.Enqueue(Root);
@@ -162,10 +255,12 @@ class BPlusTree {
 
                 qu.Enqueue(curr.Children[i]);
 
-                if (curr.IsLeaf == false && qu.Peek() != null) {
-                    qu.Enqueue(null);
-                }
             }
+
+            if (curr.IsLeaf == false && qu.Peek() == null) {
+                qu.Enqueue(null);
+            }
+            
             System.Console.Write("-> ");
         }
         System.Console.WriteLine();
